@@ -11,7 +11,11 @@ import (
 type Decoder struct {
 }
 
-// res can be one of: int, string, []any, map[string]any, nil in case of an error
+func (d Decoder) DecodeString(s string) (any, error) {
+	return d.Decode(strings.NewReader(s))
+}
+
+// Decode res can be one of: int, string, []any, map[string]any, nil may be returned in case of an error
 func (d Decoder) Decode(data io.Reader) (res any, err error) {
 	br, ok := data.(*bufio.Reader)
 	if !ok {
@@ -80,19 +84,25 @@ func (d Decoder) parseData(data *bufio.Reader) (any, error) {
 		}
 		return dict, nil
 	default:
-		data.UnreadByte()
-		stringLenBuf, err := d.readUntil(data, ':')
-		if err != nil {
+		if err := data.UnreadByte(); err != nil {
 			return nil, err
 		}
-		stringLen, err := strconv.Atoi(stringLenBuf)
-		s := make([]byte, stringLen)
-
-		if _, err := io.ReadAtLeast(data, s, stringLen); err != nil {
-			return nil, err
-		}
-		return string(s), nil
+		return d.parseString(data)
 	}
+}
+
+func (d Decoder) parseString(data *bufio.Reader) (string, error) {
+	stringLenBuf, err := d.readUntil(data, ':')
+	if err != nil {
+		return "", err
+	}
+	stringLen, err := strconv.Atoi(stringLenBuf)
+	s := make([]byte, stringLen)
+
+	if _, err := io.ReadAtLeast(data, s, stringLen); err != nil {
+		return "", err
+	}
+	return string(s), nil
 }
 
 func (d Decoder) parseInt(data *bufio.Reader) (int, error) {
