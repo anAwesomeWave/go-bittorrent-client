@@ -2,6 +2,7 @@ package bencode
 
 import (
 	"errors"
+	"io"
 	"reflect"
 	"testing"
 )
@@ -13,8 +14,14 @@ type testData struct {
 	expectedErr error
 }
 
-func TestDecoder_Decode_SimpleUseCases(t *testing.T) {
+func TestDecodeSimpleUseCases(t *testing.T) {
 	data := []testData{
+		{
+			"Check empty decoding",
+			"",
+			nil,
+			io.EOF,
+		},
 		{
 			"Check integer decoding",
 			"i42e",
@@ -29,13 +36,11 @@ func TestDecoder_Decode_SimpleUseCases(t *testing.T) {
 		},
 	}
 
-	d := Decoder{}
-
 	for _, testCase := range data {
 		encodedData := testCase.encoded
 		expectedDecoded := testCase.expected
 
-		actualDecoded, err := d.DecodeString(encodedData)
+		actualDecoded, err := DecodeString(encodedData)
 		t.Logf("Test: %s\n", testCase.testName)
 		if !errors.Is(err, testCase.expectedErr) {
 			t.Errorf("Expected err %v.\tGot: %v", testCase.expectedErr, err)
@@ -46,7 +51,7 @@ func TestDecoder_Decode_SimpleUseCases(t *testing.T) {
 	}
 }
 
-func TestDecoder_Decode_DeepStructures(t *testing.T) {
+func TestDecodeDeepStructures(t *testing.T) {
 	data := []testData{
 		{
 			"Check list of any decoding",
@@ -80,13 +85,11 @@ func TestDecoder_Decode_DeepStructures(t *testing.T) {
 		},
 	}
 
-	d := Decoder{}
-
 	for _, testCase := range data {
 		encodedData := testCase.encoded
 		expectedDecoded := testCase.expected
 
-		actualDecoded, err := d.DecodeString(encodedData)
+		actualDecoded, err := DecodeString(encodedData)
 		t.Logf("Test: %s\n", testCase.testName)
 		if !errors.Is(err, testCase.expectedErr) {
 			t.Errorf("Expected err %v.\tGot: %v", testCase.expectedErr, err)

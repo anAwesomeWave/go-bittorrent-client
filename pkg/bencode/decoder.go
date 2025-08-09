@@ -8,23 +8,20 @@ import (
 	"strings"
 )
 
-type Decoder struct {
-}
-
-func (d Decoder) DecodeString(s string) (any, error) {
-	return d.Decode(strings.NewReader(s))
+func DecodeString(s string) (any, error) {
+	return Decode(strings.NewReader(s))
 }
 
 // Decode res can be one of: int, string, []any, map[string]any, nil may be returned in case of an error
-func (d Decoder) Decode(data io.Reader) (res any, err error) {
+func Decode(data io.Reader) (res any, err error) {
 	br, ok := data.(*bufio.Reader)
 	if !ok {
 		br = bufio.NewReader(data)
 	}
-	return d.parseData(br)
+	return parseData(br)
 }
 
-func (d Decoder) parseData(data *bufio.Reader) (any, error) {
+func parseData(data *bufio.Reader) (any, error) {
 	// recursive. get one byte per time and process
 	newByte, err := data.ReadByte()
 	if err != nil {
@@ -33,7 +30,7 @@ func (d Decoder) parseData(data *bufio.Reader) (any, error) {
 	switch newByte {
 	case 'i':
 		// int
-		return d.parseInt(data)
+		return parseInt(data)
 	case 'l':
 		// list
 		l := make([]any, 0, 10)
@@ -48,7 +45,7 @@ func (d Decoder) parseData(data *bufio.Reader) (any, error) {
 			if err := data.UnreadByte(); err != nil {
 				return nil, err
 			}
-			elem, err := d.parseData(data)
+			elem, err := parseData(data)
 			if err != nil {
 				return nil, err
 			}
@@ -68,7 +65,7 @@ func (d Decoder) parseData(data *bufio.Reader) (any, error) {
 			if err := data.UnreadByte(); err != nil {
 				return nil, err
 			}
-			k, err := d.parseData(data)
+			k, err := parseData(data)
 			if err != nil {
 				return nil, err
 			}
@@ -76,7 +73,7 @@ func (d Decoder) parseData(data *bufio.Reader) (any, error) {
 			if !ok {
 				return nil, errors.New("bencode: non-string dictionary key")
 			}
-			val, err := d.parseData(data)
+			val, err := parseData(data)
 			if err != nil {
 				return nil, err
 			}
@@ -87,12 +84,12 @@ func (d Decoder) parseData(data *bufio.Reader) (any, error) {
 		if err := data.UnreadByte(); err != nil {
 			return nil, err
 		}
-		return d.parseString(data)
+		return parseString(data)
 	}
 }
 
-func (d Decoder) parseString(data *bufio.Reader) (string, error) {
-	stringLenBuf, err := d.readUntil(data, ':')
+func parseString(data *bufio.Reader) (string, error) {
+	stringLenBuf, err := readUntil(data, ':')
 	if err != nil {
 		return "", err
 	}
@@ -105,15 +102,15 @@ func (d Decoder) parseString(data *bufio.Reader) (string, error) {
 	return string(s), nil
 }
 
-func (d Decoder) parseInt(data *bufio.Reader) (int, error) {
-	res, err := d.readUntil(data, 'e')
+func parseInt(data *bufio.Reader) (int, error) {
+	res, err := readUntil(data, 'e')
 	if err != nil {
 		return 0, err
 	}
 	return strconv.Atoi(res)
 }
 
-func (d Decoder) readUntil(data *bufio.Reader, delim byte) (string, error) {
+func readUntil(data *bufio.Reader, delim byte) (string, error) {
 	intBuf := strings.Builder{}
 	intBuf.Grow(10)
 	for {
